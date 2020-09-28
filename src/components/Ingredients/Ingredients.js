@@ -1,4 +1,4 @@
-import React, { useReducer, useCallback, useMemo } from 'react';
+import React, { useEffect, useReducer, useCallback, useMemo } from 'react';
 
 import IngredientForm from './IngredientForm';
 import IngredientList from './IngredientList';
@@ -21,12 +21,31 @@ const ingredientReducer = (currentIngredients, action) => {
 
 const Ingredients = () => {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const { isLoading, error, data, sendRequest } = useHttp();
+  const { isLoading, error, data, sendRequest, reqExtra, reqIdentifier } = useHttp();
+
+  useEffect(() => {
+    if (!isLoading && !error && reqIdentifier === 'REMOVE_INGREDIENT') {
+      dispatch({ type: 'DELETE', id: reqExtra });
+    } else if (!isLoading && !error && reqIdentifier === 'ADD_INGREDIENT') {
+      dispatch({ type: 'ADD', ingredient: {
+        id: data.name,
+        ...reqExtra
+      }});
+    }
+  }, [data, reqExtra, reqIdentifier, isLoading, error])
+
   const filteredIngredientHandler = useCallback(filteredIngredients => {
     dispatch({ type: 'SET', ingredients: filteredIngredients });
   },[]);
 
   const addIngredientHandler = useCallback(ingredient => {
+    sendRequest(
+      'https://react-hooks-update-2aade.firebaseio.com/ingredients.json',
+      'POST',
+      JSON.stringify(ingredient),
+      ingredient,
+      'ADD_INGREDIENT'
+    );
     // dispatchHttp({ type: 'SEND' });
     // fetch('https://react-hooks-update-2aade.firebaseio.com/ingredients.json', {
     //   method: 'POST',
@@ -41,10 +60,16 @@ const Ingredients = () => {
     //     ...ingredient
     //   }});
     // });
-  }, []);
+  }, [sendRequest]);
   
   const removeIngredientHandler = useCallback(ingredientId => {
-    sendRequest(`https://react-hooks-update-2aade.firebaseio.com/ingredients/${ingredientId}.json`, 'DELETE', )
+    sendRequest(
+      `https://react-hooks-update-2aade.firebaseio.com/ingredients/${ingredientId}.json`,
+      'DELETE',
+      null,
+      ingredientId,
+      'REMOVE_INGREDIENT'
+    );
     // dispatchHttp({ type: 'SEND' });
   }, [sendRequest]);
   
